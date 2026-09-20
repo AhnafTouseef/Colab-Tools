@@ -53,24 +53,27 @@ def new_file(path, content=""):
 
 def copy(source, destination):
     """
-    Copy file or folder.
+    Copy file or folder. Preserves the root folder when copying directories.
     """
-
     source = Path(source)
+    destination = Path(destination) # Convert destination to Path object too
 
     if source.is_dir():
+        # FIX: Append the source folder's name to the destination path
+        final_destination = destination / source.name
         shutil.copytree(
             source,
-            destination,
+            final_destination,
             dirs_exist_ok=True
         )
     else:
+        final_destination = destination
         shutil.copy2(
             source,
-            destination
+            final_destination
         )
 
-    return f"Copied: '{source}' to: '{destination}'"
+    return f"Copied: '{source}' to: '{final_destination}'"
 
 
 
