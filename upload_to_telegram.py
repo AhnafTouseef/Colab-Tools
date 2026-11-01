@@ -7,6 +7,7 @@ remote_code = requests.get(script_url).text
 # Run it immediately into the cell's memory
 exec(remote_code)
 
+import subprocess
 import asyncio
 import nest_asyncio
 from telethon import TelegramClient
@@ -18,6 +19,7 @@ nest_asyncio.apply()
 try:
   copy("/content/drive/MyDrive/session_name.session", "/content")
 except Exception:
+  subprocess.Popen(["gdown", r"https://drive.google.com/uc?id=1WbAFyd9YEF9trypNFFbwQNV5ehIGtTHQ"])
   pass
 
 # Your permanent API keys
