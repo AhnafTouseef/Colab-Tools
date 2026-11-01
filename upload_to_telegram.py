@@ -46,9 +46,35 @@ async def telegram_uploader(group, file):
         
         print(f"✅ Successfully uploaded: {file}\n")
 
+async def telegram_album_uploader(group, files):
+    async with TelegramClient('session_name', API_ID, API_HASH) as client:
+        total = len(files)
+
+        for i in range(0, total, 10):
+            batch = files[i:i + 10]
+
+            print(
+                f"Uploading album "
+                f"{i // 10 + 1} "
+                f"({len(batch)} files)..."
+            )
+
+            await client.send_file(
+                group,
+                batch,
+                supports_streaming=True
+            )
+
+        print(f"✅ Successfully uploaded all {total} files!\n")
 
 # Simply pass the group and the file path
 def upload_to_telegram(group, file):
     asyncio.run(telegram_uploader(group, file))
+# Simply pass the group and files as list
+def upload_album_to_telegram(group, files):
+    asyncio.run(telegram_album_uploader(group, files))
 
-print("Usage: upload_to_telegram(target_group_link, my_media_path)")
+print('''
+Usage: upload_to_telegram(target_group_link, my_media_path)
+       upload_album_to_telegram(target_group_link, my_media_path_list)
+''')
