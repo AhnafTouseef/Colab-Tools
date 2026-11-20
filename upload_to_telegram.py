@@ -26,55 +26,85 @@ except Exception:
 API_ID = 32384699         
 API_HASH = 'a1c54b28ce028a23b5a1c379620c33f2'
 
-async def telegram_uploader(group, file):
-    """
-    Uploads any file (video, pdf, zip, image) to a specified Telegram group without captions.
-    
-    :param group: The group invite link, username, or numerical chat ID.
-    :param file: Absolute or relative system path to the file.
-    """
-    async with TelegramClient('session_name', API_ID, API_HASH) as client:
-        print(f"Starting upload for: {file}")
-        print("Please wait...")
-        
-        # Uploads raw media with no caption text
-        await client.send_file(
-            group, 
-            file, 
-            supports_streaming=True  # Allows inline video playback
+
+class TelegramUploader:
+
+    def __init__(self, group):
+        self.group = group
+        self.client = None
+        self.entity = None
+
+    async def __aenter__(self):
+        self.client = TelegramClient(
+            'session_name', API_ID, API_HASH
         )
-        
-        print(f"✅ Successfully uploaded: {file}\n")
 
-async def telegram_album_uploader(group, files):
-    async with TelegramClient('session_name', API_ID, API_HASH) as client:
-        total = len(files)
+        await self.client.start()
 
-        for i in range(0, total, 10):
-            batch = files[i:i + 10]
+        # Resolve the destination only once
+        if isinstance(self.group, str) and (
+            't.me/+' in self.group or 'joinchat/' in self.group
+        ):
+            invite_hash = self.group.rstrip('/').split('/')[-1]
+            invite_hash = invite_hash.lstrip('+')
 
-            print(
-                f"Uploading album "
-                f"{i // 10 + 1} "
-                f"({len(batch)} files)..."
+            result = await self.client(
+                CheckChatInviteRequest(invite_hash)
             )
 
-            await client.send_file(
-                group,
+            if isinstance(result, ChatInviteAlready):
+                self.entity = result.chat
+            else:
+                raise ValueError(
+                    "Your account is not already a member of this group."
+                )
+        else:
+            self.entity = await self.client.get_entity(self.group)
+
+        print("Telegram connected.")
+        print(f"Destination: {getattr(self.entity, 'title', self.entity)}")
+
+        return self
+
+    async def upload(self, file):
+        try:
+            print(f"Starting upload: {file}")
+
+            await self.client.send_file(
+                self.entity,
+                file,
+                supports_streaming=True
+            )
+
+            print(f"Successfully uploaded: {file}\n")
+
+        except FloodWaitError as e:
+            print(
+                f"Telegram FloodWait: {e.seconds} seconds. "
+                "Stopping uploads."
+            )
+            raise
+
+    async def upload_album(self, files):
+        for i in range(0, len(files), 10):
+            batch = files[i:i + 10]
+
+            await self.client.send_file(
+                self.entity,
                 batch,
                 supports_streaming=True
             )
 
-        print(f"✅ Successfully uploaded all {total} files!\n")
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self.client:
+            await self.client.disconnect()
 
-# Simply pass the group and the file path
-def upload_to_telegram(group, file):
-    asyncio.run(telegram_uploader(group, file))
-# Simply pass the group and files as list
-def upload_album_to_telegram(group, files):
-    asyncio.run(telegram_album_uploader(group, files))
+        print("Telegram disconnected.")
 
-print('''
-Usage: upload_to_telegram(target_group_link, my_media_path)
-       upload_album_to_telegram(target_group_link, my_media_path_list)
-''')
+
+print("""
+Usage:
+
+async with TelegramUploader(group) as uploader:
+    await uploader.upload(file)
+""")
