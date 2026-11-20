@@ -7,10 +7,15 @@ remote_code = requests.get(script_url).text
 # Run it immediately into the cell's memory
 exec(remote_code)
 
-import subprocess
+import re
 import asyncio
+import subprocess
 import nest_asyncio
 from telethon import TelegramClient
+from telethon.errors import FloodWaitError
+from telethon.tl.functions.messages import CheckChatInviteRequest
+from telethon.tl.types import ChatInviteAlready
+
 
 # Patch the notebook event loop
 nest_asyncio.apply()
